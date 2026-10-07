@@ -1,0 +1,32 @@
+{
+    "name": "yiendos/my-sites-ide-preprocessors-php",
+    "description": "PHP for your sites - php-fpm serving them, and a cli container for artisan, queues and background jobs - for my-sites-ide",
+    "type": "my-sites-ide-plugin",
+    "license": "MIT",
+    "keywords": ["my-sites-ide", "php", "php-fpm", "artisan", "laravel"],
+    "authors": [
+        {
+            "name": "Paul Yiend",
+            "email": "yiendos@sbmatrix.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Yiendos\\MySitesIde\\Preprocessors\\Php\\": "src/"
+        }
+    },
+    "require": {
+        "php": "^8.2",
+        "symfony/console": "^7.3"
+    },
+    "extra": {
+        "my-sites-ide": {
+            "commands": "src/Console",
+            "compose": "docker-compose.yml",
+            "env": ".env",
+            "env-example": "env-example",
+            "services": ["fpm", "cli"],
+            "autostart": true
+        }
+    }
+}

@@ -1,0 +1,18 @@
+# [preprocessors-php]
+# PHP settings for the fpm and cli containers - defaults live in this plugin's .env.
+# Run `php my-sites-ide preprocessors:php-start` after changing any of them.
+#
+# Functions fpm refuses to run. Leave this out for the plugin's hardened default list, or set
+# it to nothing to lift every restriction while developing.
+#PHP_DISABLE_FUNCTIONS=
+# Functions cli refuses to run - nothing by default, so queue workers and jobs aren't restricted.
+#PHP_CLI_DISABLE_FUNCTIONS=
+#
+# Where Xdebug connects to your editor - host.docker.internal is your machine, from Docker Desktop.
+#XDEBUG_CLIENT_HOST=host.docker.internal
+#
+# Upload/post size, memory, and error display (On while developing).
+#PHP_UPLOAD=128M
+#PHP_MEMORY_LIMIT=512M
+#PHP_DISPLAY_ERRORS=On
+#PHP_DATE_TIMEZONE=UTC

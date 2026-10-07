@@ -1,0 +1,66 @@
+# Both services read the same PHP settings (custom.ini), passed in one by one rather than
+# the whole root .env - defaults in this plugin's .env, overridden by the root .env.
+x-php-environment: &php-environment
+    XDEBUG_CLIENT_HOST: ${XDEBUG_CLIENT_HOST}
+    PHP_UPLOAD: ${PHP_UPLOAD}
+    PHP_DEFAULT_CHARSET: ${PHP_DEFAULT_CHARSET}
+    PHP_DISPLAY_ERRORS: ${PHP_DISPLAY_ERRORS}
+    PHP_DISPLAY_STARTUP_ERRORS: ${PHP_DISPLAY_STARTUP_ERRORS}
+    PHP_SHORT_OPEN_TAG: ${PHP_SHORT_OPEN_TAG}
+    PHP_HTML_ERRORS: ${PHP_HTML_ERRORS}
+    PHP_ERROR_REPORTING: ${PHP_ERROR_REPORTING}
+    PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT}
+    PHP_EXPOSE_PHP: ${PHP_EXPOSE_PHP}
+    PHP_ALLOW_URL_OPEN: ${PHP_ALLOW_URL_OPEN}
+    PHP_LOG_ERRORS: ${PHP_LOG_ERRORS}
+    PHP_ERROR_LOG: ${PHP_ERROR_LOG}
+    PHP_DATE_TIMEZONE: ${PHP_DATE_TIMEZONE}
+    PHP_SESSION_STRICT: ${PHP_SESSION_STRICT}
+    PHP_SESSION_COOKIE_HTTP: ${PHP_SESSION_COOKIE_HTTP}
+    PHP_SESSION_COOKIE_SECURE: ${PHP_SESSION_COOKIE_SECURE}
+    PHP_SESSION_COOKIE_SAMESITE: ${PHP_SESSION_COOKIE_SAMESITE}
+    PHP_MAX_EXECUTION_TIME: ${PHP_MAX_EXECUTION_TIME}
+    PHP_MAX_INPUT_TIME: ${PHP_MAX_INPUT_TIME}
+    PHP_MAX_SIZE: ${PHP_MAX_SIZE}
+
+x-php-volumes: &php-volumes
+    # mounted rather than built in, so xdebug settings change with a restart, not a rebuild
+    - './conf/docker-php-ext-xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini'
+    - '${IDE_ROOT}/Repos:/opt/repos'
+    - '${IDE_ROOT}/Packages:/opt/Packages'
+
+services:
+    fpm:
+        container_name: "fpm"
+        image: ${NAMESPACE}_fpm:latest
+        build:
+            context: .
+            args:
+                PHP_SAPI: fpm
+        environment:
+            <<: *php-environment
+            PHP_DISABLE_FUNCTIONS: ${PHP_DISABLE_FUNCTIONS}
+        volumes: *php-volumes
+        networks:
+            - my-sites-ide
+
+    # replaces the IDE's old cron and cli containers, which were the same image doing nothing
+    # but waiting to be exec'd into - artisan, queue workers and other background work run here
+    cli:
+        container_name: "cli"
+        image: ${NAMESPACE}_cli:latest
+        build:
+            context: .
+            args:
+                PHP_SAPI: cli
+        environment:
+            <<: *php-environment
+            # its own list, so background jobs aren't held to fpm's restrictions (pcntl_* for
+            # queue workers, exec for jobs that shell out) - the image reads PHP_DISABLE_FUNCTIONS
+            PHP_DISABLE_FUNCTIONS: ${PHP_CLI_DISABLE_FUNCTIONS}
+        entrypoint: ["tail", "-f", "/dev/null"]
+        volumes: *php-volumes
+        networks:
+            - my-sites-ide
+
+    # both started by `ide:spark` alongside APP (autostart: true in composer.json)
