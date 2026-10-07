@@ -11,6 +11,11 @@
 # Where Xdebug connects to your editor - host.docker.internal is your machine, from Docker Desktop.
 #XDEBUG_CLIENT_HOST=host.docker.internal
 #
+# Where each site's application code lives, inside Repos/<site>/ - an IDE setting, shared by
+# every plugin: deploy (the default), Sites for the older layout, or . for the repository root.
+# preprocessors:php-artisan runs there (--dir overrides it for one run).
+#IDE_APP_DIR=deploy
+#
 # Upload/post size, memory, and error display (On while developing).
 #PHP_UPLOAD=128M
 #PHP_MEMORY_LIMIT=512M

@@ -66,7 +66,7 @@ exists: `ide:spark` skips it with a warning until you remove it from `APP`.
 host (my-sites-ide CLI)
   |- ide:spark / ide:restart                --> docker compose up / restart (fpm and cli included)
   |- preprocessors:php-start / -stop        --> docker compose up -d / stop fpm cli
-  |- preprocessors:php-artisan <site> -- .. --> docker compose exec -w /opt/repos/<site>/Sites cli php artisan ..
+  |- preprocessors:php-artisan <site> -- .. --> docker compose exec -w /opt/repos/<site>/<IDE_APP_DIR> cli php artisan ..
 
 browser --> web server (nginx/apache/caddy plugin) --FastCGI fpm:9000--> fpm container
 cli container: artisan, queue:work, schedule:run - whatever you exec into it
@@ -86,7 +86,7 @@ Both images are the official `php:8.4-*-alpine` images with `redis`, `xdebug` an
 |---|---|
 | `preprocessors:php-start` | `docker compose up -d fpm cli`. Also recreates running containers whose compose config has changed (e.g. new `PHP_*` values) |
 | `preprocessors:php-stop` | `docker compose stop` whichever of fpm and cli is running, leaving the rest of the IDE up. The next `ide:spark` starts them again |
-| `preprocessors:php-artisan <site> -- <arguments>` | `php artisan` in `Repos/<site>/Sites`, in the cli container, e.g. `preprocessors:php-artisan example -- migrate` or `-- queue:work --once`. Put artisan's arguments after `--`, or the CLI takes their options as its own. `--dir=<folder>` for a site whose Laravel app isn't in `Sites/` (e.g. `--dir=deploy`) |
+| `preprocessors:php-artisan <site> -- <arguments>` | `php artisan` in `Repos/<site>/<IDE_APP_DIR>`, in the cli container, e.g. `preprocessors:php-artisan example -- migrate` or `-- queue:work --once`. Put artisan's arguments after `--`, or the CLI takes their options as its own. `--dir=<folder>` for a site whose Laravel app is somewhere else (e.g. `--dir=Sites`, or `--dir=.` for the repository root) |
 
 For anything else, `docker compose exec cli sh` gets you a shell.
 
@@ -124,6 +124,7 @@ it, then `preprocessors:php-start`.
 | `NAMESPACE` (root `.env`) | the image names, `${NAMESPACE}_fpm` and `${NAMESPACE}_cli` |
 | the `my-sites-ide` network | web servers reaching fpm as `fpm:9000`; sites reaching the database, redis, mailhog |
 | `IDE_ROOT` (set by the CLI and `_dev/cache/ide.env`) | the `Repos/` and `Packages/` mounts, finding `Repos/<site>` |
+| `IDE_APP_DIR` (root `.env`, set by the CLI - `deploy` if it isn't) | which folder in `Repos/<site>/` holds the app - where `preprocessors:php-artisan` runs |
 
 ## Troubleshooting
 
