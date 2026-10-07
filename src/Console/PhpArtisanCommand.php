@@ -26,11 +26,14 @@ class PhpArtisanCommand extends Command
             ->setDescription("Run artisan for a site in the cli container, e.g. preprocessors:php-artisan mysite -- migrate")
             ->addArgument('site', InputArgument::REQUIRED, 'Which site, as in Repos/<site>')
             ->addArgument('arguments', InputArgument::IS_ARRAY | InputArgument::REQUIRED, "artisan's own arguments - put them after -- so their options reach artisan")
-            ->addOption('dir', null, InputOption::VALUE_REQUIRED, 'The Laravel app inside Repos/<site>, for sites that keep it somewhere other than Sites/ (e.g. --dir=deploy)', 'Sites')
+            ->addOption('dir', null, InputOption::VALUE_REQUIRED, "The Laravel app inside Repos/<site>, for a site that keeps it somewhere other than the IDE's IDE_APP_DIR (e.g. --dir=Sites, or . for the repository root)")
         ;
     }
 
     /**
+     * In the site's application folder - Repos/<site>/<IDE_APP_DIR>, or
+     * --dir for a site laid out differently.
+     *
      * In cli rather than fpm: cli has its own, by default empty,
      * disable_functions list, so commands that fork or shell out work.
      *
@@ -42,10 +45,12 @@ class PhpArtisanCommand extends Command
     public function __invoke(OutputInterface $output, InputInterface $input, SymfonyStyle $io): int
     {
         $site = $input->getArgument('site');
-        $app = trim((string) $input->getOption('dir'), '/');
+        // --dir, else the IDE's IDE_APP_DIR (deploy on an IDE that predates it)
+        $app = trim((string) ($input->getOption('dir') ?? (getenv('IDE_APP_DIR') ?: 'deploy')), '/');
+        $path = $app === '.' || $app === '' ? $site : "{$site}/{$app}";
 
-        if (!is_file((getenv('IDE_ROOT') ?: getcwd()) . "/Repos/{$site}/{$app}/artisan")) {
-            $io->error("Repos/{$site}/{$app}/artisan doesn't exist - is {$site} a Laravel site? If its app isn't in Sites/, say where with --dir.");
+        if (!is_file((getenv('IDE_ROOT') ?: getcwd()) . "/Repos/{$path}/artisan")) {
+            $io->error("Repos/{$path}/artisan doesn't exist - is {$site} a Laravel site? If its app is in another folder, say which with --dir.");
             return Command::FAILURE;
         }
 
@@ -58,7 +63,7 @@ class PhpArtisanCommand extends Command
         $tty = stream_isatty(STDOUT) ? '' : '-T ';
         $arguments = implode(' ', array_map('escapeshellarg', $input->getArgument('arguments')));
 
-        return $this->compose($output, "exec {$tty}-w " . escapeshellarg("/opt/repos/{$site}/{$app}") . " cli php artisan {$arguments}") === 0
+        return $this->compose($output, "exec {$tty}-w " . escapeshellarg("/opt/repos/{$path}") . " cli php artisan {$arguments}") === 0
             ? Command::SUCCESS
             : Command::FAILURE;
     }
