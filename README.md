@@ -136,15 +136,13 @@ docker compose build fpm cli
 [build-composer plugin](https://github.com/yiendos/my-sites-ide-build-composer):
 
 ```
-php my-sites-ide build:composer-run <site> -- require --no-scripts --ignore-platform-req=ext-opentelemetry \
+php my-sites-ide build:composer-run <site> -- require \
     open-telemetry/sdk open-telemetry/exporter-otlp open-telemetry/opentelemetry-auto-laravel
-php my-sites-ide preprocessors:php-artisan <site> -- package:discover
 ```
 
-Composer's container doesn't have the `opentelemetry` extension, which the Laravel package requires
-and checks for as it loads - hence `--ignore-platform-req` and `--no-scripts`, with `package:discover`
-run in cli, which does have it. The same goes for any later `composer install` or `update` of that
-site.
+Composer's image needs the `opentelemetry` extension too - the Laravel package requires it, and
+`package:discover` stops without it. If you get *The opentelemetry extension must be loaded*, rebuild
+it: `docker compose build composer`.
 
 **3. Turn it on** in the IDE's root `.env`, then `preprocessors:php-start`:
 
@@ -204,8 +202,6 @@ created: `preprocessors:php-start` recreates them.
 - Nothing runs the Laravel scheduler or queue workers - `cli` waits to be exec'd into, as the old
   cron and cli containers did. Running `schedule:run` for each site is a planned follow-up.
 - PHP 8.4 only - the version is fixed in the `Dockerfile`.
-- The build-composer plugin's image doesn't have the `opentelemetry` extension, so Composer needs
-  `--ignore-platform-req=ext-opentelemetry --no-scripts` for sites with the tracing packages.
 - Tracing has no per-site switch - `PHP_OTEL_ENABLED` turns it on for every site that has the
   packages.
 - Extensions are fixed at build time (`PHP_PECL_EXTS`, plus `pdo_mysql`) - adding one means editing
