@@ -5,7 +5,7 @@ ARG PHP_SAPI=fpm
 
 FROM php:8.4-${PHP_SAPI}-alpine3.22
 
-ARG PHP_PECL_EXTS="redis"
+ARG PHP_PECL_EXTS="redis opentelemetry"
 
 WORKDIR /opt/repos
 
