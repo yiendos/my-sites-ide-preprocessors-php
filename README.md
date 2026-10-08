@@ -13,6 +13,7 @@ and cli containers that used to ship inside the IDE.
 - [Architecture](#architecture)
 - [Command reference](#command-reference)
 - [Configuration](#configuration)
+- [Tracing with OpenTelemetry](#tracing-with-opentelemetry)
 - [What it uses from the IDE](#what-it-uses-from-the-ide)
 - [Troubleshooting](#troubleshooting)
 - [Known gaps](#known-gaps)
@@ -117,6 +118,58 @@ plugin's environment, gets.
 Xdebug's own settings are in `conf/docker-php-ext-xdebug.ini`, mounted rather than built in: edit
 it, then `preprocessors:php-start`.
 
+## Tracing with OpenTelemetry
+
+With the [monitoring plugins](https://github.com/yiendos/my-sites-ide-preset-monitoring) installed,
+a site can send a trace for every request, artisan command and queue job - its database queries,
+cache calls and HTTP calls as spans - plus its log lines, linked to the trace, to Grafana. It's off
+until you turn it on, and each site opts in with Composer packages.
+
+**1. Rebuild the images once**, for the `opentelemetry` extension (`preprocessors:php-start` doesn't
+build):
+
+```
+docker compose build fpm cli
+```
+
+**2. Add the packages to the site** (a Laravel site here), with the
+[build-composer plugin](https://github.com/yiendos/my-sites-ide-build-composer):
+
+```
+php my-sites-ide build:composer-run <site> -- require --no-scripts --ignore-platform-req=ext-opentelemetry \
+    open-telemetry/sdk open-telemetry/exporter-otlp open-telemetry/opentelemetry-auto-laravel
+php my-sites-ide preprocessors:php-artisan <site> -- package:discover
+```
+
+Composer's container doesn't have the `opentelemetry` extension, which the Laravel package requires
+and checks for as it loads - hence `--ignore-platform-req` and `--no-scripts`, with `package:discover`
+run in cli, which does have it. The same goes for any later `composer install` or `update` of that
+site.
+
+**3. Turn it on** in the IDE's root `.env`, then `preprocessors:php-start`:
+
+```
+PHP_OTEL_ENABLED=true
+```
+
+Each site reports as its folder in `Repos/` - `<site>` in Grafana's Explore, under Tempo for traces
+and Loki for logs. The traces and logs go to the alloy plugin at `alloy:4318`.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `PHP_OTEL_ENABLED` | `false` | `true` starts the OpenTelemetry SDK in every site that has the packages (`OTEL_PHP_AUTOLOAD_ENABLED`) |
+| `OTEL_SERVICE_NAME` | the site's `Repos/` folder | Set it to report every site under one name |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://alloy:4318` | Where traces and logs go - `http://tempo:4318` sends traces straight to Tempo, without Alloy |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | |
+| `OTEL_TRACES_EXPORTER` / `OTEL_LOGS_EXPORTER` / `OTEL_METRICS_EXPORTER` | `otlp` / `otlp` / `none` | `none` turns a signal off |
+
+The extension is always loaded, because a site with the packages refuses to boot without it. On its
+own it does nothing: with `PHP_OTEL_ENABLED=false` no SDK starts and nothing is sent.
+
+The site's name is set by `conf/otel-service-name.php`, run before each request and command
+(`auto_prepend_file`). The SDK reads `OTEL_SERVICE_NAME` while the site's autoloader is starting,
+before Laravel loads the site's `.env` - so a site's own `.env` can't name it.
+
 ## What it uses from the IDE
 
 | From the IDE | Used for |
@@ -136,6 +189,12 @@ In a queue worker or artisan command, run it in `cli` instead of fpm.
 its job is `cli`'s now.
 
 **`502 Bad Gateway` from the web server.** fpm isn't running: `php my-sites-ide preprocessors:php-start`.
+Or fpm was recreated and the web server still has its old address (`connect() failed ... Connection
+refused` in its log) - reload it, e.g. `php my-sites-ide servers:nginx-reload`.
+
+**Traces don't show up.** Check `docker compose exec fpm env | grep OTEL` says
+`OTEL_PHP_AUTOLOAD_ENABLED=true`, the site has the three packages, and the alloy plugin is running.
+New traces take a few seconds to be searchable in Grafana.
 
 **A changed `PHP_*` value has no effect.** The containers read their environment when they're
 created: `preprocessors:php-start` recreates them.
@@ -145,5 +204,9 @@ created: `preprocessors:php-start` recreates them.
 - Nothing runs the Laravel scheduler or queue workers - `cli` waits to be exec'd into, as the old
   cron and cli containers did. Running `schedule:run` for each site is a planned follow-up.
 - PHP 8.4 only - the version is fixed in the `Dockerfile`.
+- The build-composer plugin's image doesn't have the `opentelemetry` extension, so Composer needs
+  `--ignore-platform-req=ext-opentelemetry --no-scripts` for sites with the tracing packages.
+- Tracing has no per-site switch - `PHP_OTEL_ENABLED` turns it on for every site that has the
+  packages.
 - Extensions are fixed at build time (`PHP_PECL_EXTS`, plus `pdo_mysql`) - adding one means editing
   the `Dockerfile` and rebuilding.
