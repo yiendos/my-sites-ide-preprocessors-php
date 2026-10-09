@@ -5,7 +5,7 @@ ARG PHP_SAPI=fpm
 
 FROM php:8.4-${PHP_SAPI}-alpine3.22
 
-ARG PHP_PECL_EXTS="redis"
+ARG PHP_PECL_EXTS="redis opentelemetry"
 
 WORKDIR /opt/repos
 
@@ -22,6 +22,10 @@ RUN apk add --no-cache ${PHPIZE_DEPS} linux-headers mariadb-client \
 #lets harden php with some default values - each reads an environment variable,
 #falling back to production-safe values when it isn't set (e.g. a deployed image)
 COPY ./conf/custom.ini /usr/local/etc/php/conf.d/custom.ini
+
+#OpenTelemetry: names each site's service after its Repos/ folder - a no-op unless PHP_OTEL_ENABLED=true
+COPY ./conf/otel.ini /usr/local/etc/php/conf.d/otel.ini
+COPY ./conf/otel-service-name.php /usr/local/etc/php/otel-service-name.php
 
 # Now that we've installed and configured, switch the user 
 USER  webuser 

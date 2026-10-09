@@ -22,6 +22,16 @@ x-php-environment: &php-environment
     PHP_MAX_EXECUTION_TIME: ${PHP_MAX_EXECUTION_TIME}
     PHP_MAX_INPUT_TIME: ${PHP_MAX_INPUT_TIME}
     PHP_MAX_SIZE: ${PHP_MAX_SIZE}
+    # OpenTelemetry - off unless PHP_OTEL_ENABLED=true. The extension is always loaded (a no-op on
+    # its own), as a site with the auto-instrumentation packages refuses to boot without it
+    OTEL_PHP_AUTOLOAD_ENABLED: ${PHP_OTEL_ENABLED}
+    # not OTEL_SERVICE_NAME itself - conf/otel-service-name.php sets that per site, unless this is set
+    PHP_OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME}
+    OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+    OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL}
+    OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER}
+    OTEL_LOGS_EXPORTER: ${OTEL_LOGS_EXPORTER}
+    OTEL_METRICS_EXPORTER: ${OTEL_METRICS_EXPORTER}
 
 x-php-volumes: &php-volumes
     # mounted rather than built in, so xdebug settings change with a restart, not a rebuild
