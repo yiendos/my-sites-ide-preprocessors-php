@@ -3,7 +3,7 @@
 #   PHP_SAPI=cli  ->  ${NAMESPACE}_cli, artisan, queues and other background work
 ARG PHP_SAPI=fpm
 
-FROM php:8.4-${PHP_SAPI}-alpine3.22
+FROM php:8.4.27-${PHP_SAPI}-alpine3.23
 
 ARG PHP_PECL_EXTS="redis opentelemetry"
 
