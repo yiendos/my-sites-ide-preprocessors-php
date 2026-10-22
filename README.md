@@ -78,7 +78,7 @@ both containers
   /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini <-- conf/docker-php-ext-xdebug.ini
 ```
 
-Both images are the official `php:8.4-*-alpine` images with `redis`, `xdebug` and `pdo_mysql`, and
+Both images are the official `php:8.4.27-*-alpine3.23` images with `redis`, `xdebug` and `pdo_mysql`, and
 `mariadb-client`. They run as `webuser` (uid 20008, gid 20009).
 
 ## Command reference
@@ -201,7 +201,7 @@ created: `preprocessors:php-start` recreates them.
 
 - Nothing runs the Laravel scheduler or queue workers - `cli` waits to be exec'd into, as the old
   cron and cli containers did. Running `schedule:run` for each site is a planned follow-up.
-- PHP 8.4 only - the version is fixed in the `Dockerfile`.
+- PHP 8.4.27 only - the version is pinned in the `Dockerfile`, so a bump is a deliberate change.
 - Tracing has no per-site switch - `PHP_OTEL_ENABLED` turns it on for every site that has the
   packages.
 - Extensions are fixed at build time (`PHP_PECL_EXTS`, plus `pdo_mysql`) - adding one means editing
